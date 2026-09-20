@@ -1,0 +1,10 @@
+[project]
+name = "lifeagent"
+version = "0.1.0"
+description = "Persoenlicher Alltags-Agent fuer Vertraege, Abos, Einnahmen und Ausgaben"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]

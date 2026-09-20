@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row-between">
+  <div>
+    <h1>{{ contract.name }}</h1>
+    <p class="lead">
+      {{ contract.kind_label }}{% if contract.provider %} · {{ contract.provider }}{% endif %} · {{ contract.category }}
+      <span class="pill {{ 'pill-ok' if contract.status == 'active' }}">{{ contract.status_label }}</span>
+    </p>
+  </div>
+  <div class="inline">
+    <a class="btn" href="/vertraege/{{ contract.id }}/bearbeiten">Bearbeiten</a>
+    <a class="btn btn-primary" href="/vertraege/{{ contract.id }}/kuendigung">Kündigung vorbereiten</a>
+  </div>
+</div>
+
+<div class="grid grid-4">
+  <div class="card stat">
+    <span class="label">Betrag</span>
+    <span class="value">{{ contract.amount_cents | money }}</span>
+    <span class="hint">{{ contract.interval_label }}</span>
+  </div>
+  <div class="card stat">
+    <span class="label">Pro Monat</span>
+    <span class="value">{{ contract.monthly_cents | money }}</span>
+    <span class="hint">{{ contract.yearly_cents | money }} im Jahr</span>
+  </div>
+  <div class="card stat">
+    <span class="label">Kündigen bis</span>
+    <span class="value">{{ timing.cancel_by | datum }}</span>
+    <span class="hint">
+      {% if timing.cancel_by %}{{ timing.days_until_cancel | tage }}
+      {% elif contract.start_date %}unbefristet – jederzeit kündbar
+      {% else %}Vertragsbeginn fehlt{% endif %}
+    </span>
+  </div>
+  <div class="card stat">
+    <span class="label">Nächste Abbuchung</span>
+    <span class="value">{{ timing.next_payment | datum }}</span>
+    <span class="hint">läuft bis {{ timing.period_end | datum }}</span>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Eckdaten</h2>
+    <div class="table-wrap">
+      <table>
+        <tbody>
+          <tr><td class="muted">Beginn</td><td class="right">{{ contract.start_date | datum }}</td></tr>
+          <tr><td class="muted">Mindestlaufzeit</td><td class="right">{{ contract.minimum_term_months or '–' }} Monate</td></tr>
+          <tr><td class="muted">Verlängerung</td><td class="right">{{ (contract.renewal_months ~ ' Monate') if contract.renewal_months else 'unbefristet' }}</td></tr>
+          <tr><td class="muted">Kündigungsfrist</td><td class="right">
+            {%- if contract.notice_months %}{{ contract.notice_months }} Monate{% endif %}
+            {%- if contract.notice_days %} {{ contract.notice_days }} Tage{% endif %}
+            {%- if not contract.notice_months and not contract.notice_days %}keine hinterlegt{% endif %}</td></tr>
+          {% if contract.customer_number %}<tr><td class="muted">Kundennummer</td><td class="right">{{ contract.customer_number }}</td></tr>{% endif %}
+          {% if contract.contact_email %}<tr><td class="muted">Kontakt</td><td class="right">{{ contract.contact_email }}</td></tr>{% endif %}
+          {% if contract.website %}<tr><td class="muted">Kundenbereich</td><td class="right"><a href="{{ contract.website }}" target="_blank" rel="noopener">öffnen</a></td></tr>{% endif %}
+          <tr><td class="muted">Bisher erfasst</td><td class="right">{{ paid_total | money }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    {% if contract.notes %}<h3 style="margin-top:16px">Notizen</h3><p class="small">{{ contract.notes }}</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Wenn du kündigen willst</h2>
+    <ol class="steps small">
+      {% for step in steps %}<li>{{ step }}</li>{% endfor %}
+    </ol>
+    <div class="inline" style="margin-top:14px">
+      <a class="btn btn-primary" href="/vertraege/{{ contract.id }}/kuendigung">Kündigungsschreiben erzeugen</a>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:18px 0">
+    <h3>Status ändern</h3>
+    <form method="post" action="/vertraege/{{ contract.id }}/status" class="inline">
+      <select name="status" style="max-width:200px">
+        {% for key, label in statuses.items() %}
+        <option value="{{ key }}" {{ 'selected' if contract.status == key }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn" type="submit">Übernehmen</button>
+    </form>
+    <form method="post" action="/vertraege/{{ contract.id }}/loeschen" style="margin-top:12px">
+      <button class="btn btn-danger btn-small" type="submit"
+              data-confirm="{{ contract.name }} wirklich löschen? Zugeordnete Buchungen bleiben erhalten.">
+        Vertrag löschen
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Zugeordnete Buchungen</h2>
+  {% if payments %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Datum</th><th>Empfänger</th><th>Verwendungszweck</th><th class="right">Betrag</th></tr></thead>
+      <tbody>
+      {% for t in payments %}
+        <tr>
+          <td class="nowrap">{{ t.booking_date | datum }}</td>
+          <td>{{ t.counterparty }}</td>
+          <td class="small muted">{{ t.purpose[:70] }}</td>
+          <td class="right nowrap">{{ t.amount_cents | money(true) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted small">Noch keine Buchungen zugeordnet. Importiere Kontoumsätze – ich ordne sie anhand des Anbieternamens automatisch zu.</p>
+  {% endif %}
+</div>
+{% endblock %}

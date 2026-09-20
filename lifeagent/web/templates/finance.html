@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row-between">
+  <div>
+    <h1>Einnahmen & Ausgaben</h1>
+    <p class="lead">
+      Zeitraum: letzte {{ monate }} Monate · {{ income | money }} rein · {{ expense | money }} raus
+    </p>
+  </div>
+  <div class="inline">
+    <a class="btn" href="/import">Umsätze importieren</a>
+    <a class="btn" href="/export/buchungen.csv">Als CSV sichern</a>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Buchung erfassen</h2>
+    <form method="post" action="/finanzen/neu">
+      <div class="grid grid-2" style="gap:12px">
+        <div class="field">
+          <label for="booking_date">Datum</label>
+          <input id="booking_date" type="date" name="booking_date" value="{{ today.isoformat() }}" required>
+        </div>
+        <div class="field">
+          <label for="amount">Betrag</label>
+          <input id="amount" name="amount" inputmode="decimal" placeholder="49,90" required>
+        </div>
+      </div>
+      <div class="grid grid-2" style="gap:12px">
+        <div class="field">
+          <label for="direction">Art</label>
+          <select id="direction" name="direction">
+            <option value="aus">Ausgabe</option>
+            <option value="ein">Einnahme</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="category">Bereich</label>
+          <select id="category" name="category">
+            <option value="">automatisch erkennen</option>
+            {% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="counterparty">Empfänger / Auftraggeber</label>
+        <input id="counterparty" name="counterparty" placeholder="z. B. Stadtwerke">
+      </div>
+      <div class="field">
+        <label for="purpose">Verwendungszweck</label>
+        <input id="purpose" name="purpose" placeholder="Abschlag September">
+      </div>
+      <div class="field">
+        <label for="contract_id">Gehört zu Vertrag</label>
+        <select id="contract_id" name="contract_id">
+          <option value="">– keiner –</option>
+          {% for c in contracts %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-primary" type="submit">Speichern</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Wohin geht das Geld?</h2>
+    {% if by_category %}
+    {% set top = by_category[0][1] %}
+    <div class="stack">
+      {% for name, cents in by_category[:10] %}
+      <div>
+        <div class="row-between small"><span>{{ name }}</span><strong>{{ cents | money }}</strong></div>
+        <div class="meter"><span style="width: {{ (cents / top * 100) | round(1) }}%"></span></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted small">Noch keine Ausgaben im Zeitraum.</p>
+    {% endif %}
+    <form method="post" action="/finanzen/neu-zuordnen" style="margin-top:16px">
+      <button class="btn btn-small" type="submit">Nicht zugeordnete Buchungen neu prüfen</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="grid grid-4" style="margin-bottom:8px">
+    <div class="field" style="margin:0">
+      <label>Suche</label>
+      <input type="search" name="q" value="{{ q }}" placeholder="Empfänger oder Zweck">
+    </div>
+    <div class="field" style="margin:0">
+      <label>Bereich</label>
+      <select name="kategorie">
+        <option value="">alle</option>
+        {% for c in categories %}<option value="{{ c }}" {{ 'selected' if kategorie == c }}>{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field" style="margin:0">
+      <label>Art</label>
+      <select name="art">
+        <option value="">alle</option>
+        <option value="ein" {{ 'selected' if art == 'ein' }}>nur Einnahmen</option>
+        <option value="aus" {{ 'selected' if art == 'aus' }}>nur Ausgaben</option>
+      </select>
+    </div>
+    <div class="field" style="margin:0">
+      <label>Zeitraum (Monate)</label>
+      <div class="inline">
+        <input type="number" name="monate" min="1" max="60" value="{{ monate }}" style="max-width:90px">
+        <button class="btn" type="submit">Filtern</button>
+      </div>
+    </div>
+  </form>
+
+  {% if rows %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Datum</th><th>Empfänger / Zweck</th><th>Zuordnung</th><th class="right">Betrag</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for t in rows %}
+        <tr>
+          <td class="nowrap small">{{ t.booking_date | datum }}</td>
+          <td>
+            <strong>{{ t.counterparty or '—' }}</strong>
+            <div class="small muted">{{ t.purpose[:80] }}</div>
+          </td>
+          <td>
+            <form method="post" action="/finanzen/{{ t.id }}/zuordnen" class="inline">
+              <select name="contract_id" style="max-width:170px" onchange="this.form.submit()">
+                <option value="">– kein Vertrag –</option>
+                {% for c in contracts %}
+                <option value="{{ c.id }}" {{ 'selected' if t.contract_id == c.id }}>{{ c.name }}</option>
+                {% endfor %}
+              </select>
+              <label class="small muted" style="display:inline;font-weight:400">
+                <input type="checkbox" name="merken" value="1" title="Zuordnung für künftige Importe merken">merken
+              </label>
+            </form>
+            {% if t.category %}<span class="pill">{{ t.category }}</span>{% endif %}
+          </td>
+          <td class="right nowrap {{ 'value pos' if t.amount_cents > 0 }}">{{ t.amount_cents | money(true) }}</td>
+          <td class="right">
+            <form method="post" action="/finanzen/{{ t.id }}/loeschen">
+              <button class="btn btn-small btn-danger" type="submit" data-confirm="Buchung löschen?">×</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <h3>Keine Buchungen im Zeitraum</h3>
+    <p>Lade den CSV-Export deiner Bank hoch – das ist der schnellste Weg.</p>
+    <a class="btn btn-primary" href="/import">Umsätze importieren</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

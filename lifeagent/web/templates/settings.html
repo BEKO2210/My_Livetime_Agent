@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Einstellungen</h1>
+<p class="lead">Alles optional. Der Agent läuft auch ohne eine einzige Änderung.</p>
+
+<form method="post" action="/einstellungen">
+<div class="grid grid-2">
+  <div class="card">
+    <fieldset><legend>Grundeinstellungen</legend>
+      <div class="field">
+        <label for="owner_name">Dein Name</label>
+        <input id="owner_name" name="owner_name" value="{{ values.owner_name }}" placeholder="wird in Briefing und Kündigungsschreiben verwendet">
+      </div>
+      <div class="grid grid-2" style="gap:12px">
+        <div class="field">
+          <label for="currency">Währung</label>
+          <select id="currency" name="currency">
+            {% for code in ['EUR', 'CHF', 'USD'] %}
+            <option value="{{ code }}" {{ 'selected' if values.currency == code }}>{{ code }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="theme">Darstellung</label>
+          <select id="theme" name="theme">
+            <option value="auto" {{ 'selected' if values.theme == 'auto' }}>wie das System</option>
+            <option value="light" {{ 'selected' if values.theme == 'light' }}>hell</option>
+            <option value="dark" {{ 'selected' if values.theme == 'dark' }}>dunkel</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-2" style="gap:12px">
+        <div class="field">
+          <label for="reminder_lead_days">Vorwarnzeit für Fristen (Tage)</label>
+          <input id="reminder_lead_days" name="reminder_lead_days" type="number" min="1" max="365" value="{{ values.reminder_lead_days }}">
+        </div>
+        <div class="field">
+          <label for="briefing_hour">Uhrzeit der Tagesübersicht</label>
+          <input id="briefing_hour" name="briefing_hour" type="number" min="0" max="23" value="{{ values.briefing_hour }}">
+        </div>
+      </div>
+      <div class="field">
+        <label for="monthly_income_hint">Monatliches Einkommen (nur falls du keine Umsätze importierst)</label>
+        <input id="monthly_income_hint" name="monthly_income_hint" type="number" min="0" value="{{ values.monthly_income_hint }}" placeholder="z. B. 2800">
+        <div class="help">In ganzen Euro. Dient nur als Vergleichswert für die Fixkostenquote.</div>
+      </div>
+    </fieldset>
+  </div>
+
+  <div class="card">
+    <fieldset><legend>Benachrichtigungen</legend>
+      <div class="field">
+        <label for="notify_channel">Wie soll ich mich melden?</label>
+        <select id="notify_channel" name="notify_channel">
+          <option value="app" {{ 'selected' if values.notify_channel == 'app' }}>nur in der App</option>
+          <option value="ntfy" {{ 'selected' if values.notify_channel == 'ntfy' }}>Push aufs Handy (ntfy)</option>
+          <option value="email" {{ 'selected' if values.notify_channel == 'email' }}>E-Mail</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="ntfy_topic">ntfy-Thema</label>
+        <input id="ntfy_topic" name="ntfy_topic" value="{{ values.ntfy_topic }}" placeholder="z. B. lifeagent-a7f3k2">
+        <div class="help">
+          App „ntfy“ installieren, dasselbe Thema abonnieren – fertig. Wähle etwas Unrat­bares:
+          jeder, der das Thema kennt, kann mitlesen.
+        </div>
+      </div>
+      <div class="field">
+        <label for="ntfy_server">ntfy-Server</label>
+        <input id="ntfy_server" name="ntfy_server" value="{{ values.ntfy_server }}">
+      </div>
+      <div class="grid grid-2" style="gap:12px">
+        <div class="field">
+          <label for="smtp_host">SMTP-Server</label>
+          <input id="smtp_host" name="smtp_host" value="{{ values.smtp_host }}" placeholder="smtp.beispiel.de">
+        </div>
+        <div class="field">
+          <label for="smtp_port">Port</label>
+          <input id="smtp_port" name="smtp_port" type="number" value="{{ values.smtp_port }}">
+        </div>
+      </div>
+      <div class="grid grid-2" style="gap:12px">
+        <div class="field">
+          <label for="smtp_user">Benutzer</label>
+          <input id="smtp_user" name="smtp_user" value="{{ values.smtp_user }}">
+        </div>
+        <div class="field">
+          <label for="smtp_password">Passwort</label>
+          <input id="smtp_password" name="smtp_password" type="password" placeholder="{{ 'gespeichert – leer lassen zum Behalten' if values.smtp_password else '' }}">
+        </div>
+      </div>
+      <div class="grid grid-2" style="gap:12px">
+        <div class="field">
+          <label for="smtp_from">Absender</label>
+          <input id="smtp_from" name="smtp_from" value="{{ values.smtp_from }}">
+        </div>
+        <div class="field">
+          <label for="smtp_to">Empfänger</label>
+          <input id="smtp_to" name="smtp_to" value="{{ values.smtp_to }}">
+        </div>
+      </div>
+    </fieldset>
+  </div>
+</div>
+
+<div class="inline">
+  <button class="btn btn-primary" type="submit">Speichern</button>
+</div>
+</form>
+
+<div class="grid grid-2" style="margin-top:18px">
+  <div class="card">
+    <h2>Testnachricht</h2>
+    <p class="small muted">Schickt dir die aktuelle Tagesübersicht über den gewählten Kanal.</p>
+    <form method="post" action="/buddy/test">
+      <button class="btn" type="submit">Testnachricht senden</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Deine Daten</h2>
+    <p class="small">
+      Alles liegt in einer einzigen Datei:<br>
+      <code class="small">{{ db_path }}</code>
+    </p>
+    <div class="inline">
+      <a class="btn btn-small" href="/export/daten.json">Sicherung herunterladen</a>
+      <a class="btn btn-small" href="/export/buchungen.csv">Buchungen als CSV</a>
+    </div>
+    <p class="small muted" style="margin-top:12px">
+      Kopiere die Datei regelmäßig auf einen USB-Stick oder in deine Cloud.
+      Automatische Kopien liegen in <code>data/backups/</code>.
+    </p>
+  </div>
+</div>
+
+{% if rules %}
+<div class="card">
+  <h2>Zuordnungsregeln</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Erkennungstext</th><th>Vertrag</th><th>Bereich</th><th class="right">Treffer</th><th></th></tr></thead>
+      <tbody>
+      {% for rule in rules %}
+        <tr>
+          <td><code>{{ rule.pattern }}</code></td>
+          <td>{{ rule.contract.name if rule.contract else '—' }}</td>
+          <td class="small">{{ rule.category or '—' }}</td>
+          <td class="right">{{ rule.hits }}</td>
+          <td class="right">
+            <form method="post" action="/einstellungen/regel/{{ rule.id }}/loeschen">
+              <button class="btn btn-small btn-danger" type="submit" data-confirm="Regel löschen?">×</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

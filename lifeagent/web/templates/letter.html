@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Kündigung: {{ contract.name }}</h1>
+<p class="lead">
+  {% if timing.cancel_by %}
+    Damit es fristgerecht ist, muss die Kündigung bis zum <strong>{{ timing.cancel_by | datum }}</strong>
+    beim Anbieter sein ({{ timing.days_until_cancel | tage }}).
+  {% else %}
+    Für diesen Vertrag ist keine feste Frist hinterlegt – er ist voraussichtlich jederzeit kündbar.
+  {% endif %}
+</p>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="row-between">
+      <h2>Fertiger Text</h2>
+      <button class="btn btn-small" data-copy="#brief">Kopieren</button>
+    </div>
+    <div class="letter" id="brief">{{ letter }}</div>
+    <form method="get" class="inline" style="margin-top:14px">
+      <label style="margin:0">Kündigung zum</label>
+      <input type="date" name="zum" style="max-width:190px"
+             value="{{ timing.period_end.isoformat() if timing.period_end else '' }}">
+      <button class="btn btn-small" type="submit">Datum übernehmen</button>
+    </form>
+    <p class="small muted" style="margin-top:10px">
+      Kein Rechtsrat – prüfe Anbieteradresse und Termin vor dem Absenden.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>So gehst du vor</h2>
+    <ol class="steps small">{% for step in steps %}<li>{{ step }}</li>{% endfor %}</ol>
+    {% if contract.contact_email %}
+    <p class="small" style="margin-top:12px">
+      Kontakt laut deinen Angaben: <strong>{{ contract.contact_email }}</strong>
+    </p>
+    {% endif %}
+    <form method="post" action="/vertraege/{{ contract.id }}/status" style="margin-top:14px">
+      <input type="hidden" name="status" value="cancelled">
+      <button class="btn btn-primary" type="submit">Ich habe gekündigt – Status setzen</button>
+    </form>
+    <a class="btn btn-small" style="margin-top:10px" href="/vertraege/{{ contract.id }}">zurück zum Vertrag</a>
+  </div>
+</div>
+{% endblock %}

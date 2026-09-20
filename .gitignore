@@ -1,0 +1,22 @@
+# Daten des Nutzers – niemals ins Repo
+data/*.db
+data/*.db-*
+data/*.sqlite3
+data/backups/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="{{ theme }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} · {{ app_name }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/">
+    <span class="brand-mark">LA</span>
+    <span class="brand-text">{{ app_name }}</span>
+  </a>
+  <nav>
+    <a href="/" class="{{ 'active' if title == 'Uebersicht' }}">Übersicht</a>
+    <a href="/vertraege">Verträge</a>
+    <a href="/finanzen">Geld</a>
+    <a href="/import">Import</a>
+    <a href="/buddy" class="nav-badge">Buddy{% if open_alert_count %}<span class="badge">{{ open_alert_count }}</span>{% endif %}</a>
+    <a href="/einstellungen">Einstellungen</a>
+  </nav>
+</header>
+
+{% if hinweis %}
+<div class="flash flash-{{ hinweis_art }}">{{ hinweis }}</div>
+{% endif %}
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<footer>
+  <span>{{ app_name }} {{ version }} — deine Daten bleiben auf diesem Gerät.</span>
+  <span><a href="/export/daten.json">Daten sichern</a> · <a href="/briefing.txt">Briefing als Text</a></span>
+</footer>
+<script src="/static/app.js" defer></script>
+</body>
+</html>
