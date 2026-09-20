@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block content %}
+{% set c = contract %}
+{% set d = draft or {} %}
+
+<h1>{{ 'Vertrag bearbeiten' if c else 'Neuer Vertrag' }}</h1>
+<p class="lead">
+  Pflicht ist nur der Name. Je mehr du einträgst, desto besser kann ich aufpassen –
+  vor allem Beginn, Laufzeit und Kündigungsfrist.
+</p>
+
+{% if source %}
+<div class="card" style="border-left:3px solid var(--accent)">
+  <strong>Aus einer Buchung übernommen:</strong>
+  {{ source.booking_date | datum }} · {{ source.counterparty }} · {{ source.amount_cents | money }}
+  <div class="small muted">Prüf die Werte kurz und ergänze Laufzeit und Frist.</div>
+</div>
+{% endif %}
+
+<form method="post" action="{{ '/vertraege/' ~ c.id if c else '/vertraege/neu' }}">
+<div class="grid grid-2">
+  <div class="card">
+    <fieldset><legend>Was ist das?</legend>
+      <div class="field">
+        <label for="name">Name *</label>
+        <input id="name" name="name" required value="{{ c.name if c else d.get('name','') }}" placeholder="z. B. Netflix Standard">
+      </div>
+      <div class="field">
+        <label for="provider">Anbieter</label>
+        <input id="provider" name="provider" value="{{ c.provider if c else d.get('provider','') }}" placeholder="z. B. Netflix International B.V.">
+        <div class="help">Hilft mir, Kontobuchungen automatisch zuzuordnen.</div>
+      </div>
+      <div class="grid grid-2" style="gap:12px">
+        <div class="field">
+          <label for="kind">Art</label>
+          <select id="kind" name="kind">
+            {% for key, label in kinds.items() %}
+            <option value="{{ key }}" {{ 'selected' if (c.kind if c else d.get('kind')) == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="category">Bereich</label>
+          <select id="category" name="category">
+            {% for name in categories %}
+            <option value="{{ name }}" {{ 'selected' if (c.category if c else d.get('category')) == name }}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      {% if c %}
+      <div class="field">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          {% for key, label in statuses.items() %}
+          <option value="{{ key }}" {{ 'selected' if c.status == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+    </fieldset>
+  </div>
+
+  <div class="card">
+    <fieldset><legend>Was kostet es?</legend>
+      <div class="grid grid-2" style="gap:12px">
+        <div class="field">
+          <label for="amount">Betrag</label>
+          <input id="amount" name="amount" inputmode="decimal"
+                 value="{{ '%.2f' | format(c.amount_cents / 100) | replace('.', ',') if c else d.get('amount','') }}"
+                 placeholder="17,99">
+        </div>
+        <div class="field">
+          <label for="interval">Rhythmus</label>
+          <select id="interval" name="interval">
+            {% for key, label in intervals.items() %}
+            <option value="{{ key }}" {{ 'selected' if (c.interval if c else d.get('interval')) == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-2" style="gap:12px">
+        <div class="field">
+          <label for="start_date">Vertragsbeginn</label>
+          <input id="start_date" name="start_date" type="date"
+                 value="{{ c.start_date.isoformat() if c and c.start_date else d.get('start_date','') }}">
+          <div class="help">Grundlage für Laufzeit und Frist.</div>
+        </div>
+        <div class="field">
+          <label for="end_date">Ende (falls bekannt)</label>
+          <input id="end_date" name="end_date" type="date"
+                 value="{{ c.end_date.isoformat() if c and c.end_date else '' }}">
+        </div>
+      </div>
+    </fieldset>
+  </div>
+
+  <div class="card">
+    <fieldset><legend>Laufzeit & Kündigung</legend>
+      <div class="grid grid-2" style="gap:12px">
+        <div class="field">
+          <label for="minimum_term_months">Mindestlaufzeit (Monate)</label>
+          <input id="minimum_term_months" name="minimum_term_months" type="number" min="0" max="120"
+                 value="{{ c.minimum_term_months if c else d.get('minimum_term_months', 0) }}">
+          <div class="help">0 = keine.</div>
+        </div>
+        <div class="field">
+          <label for="renewal_months">Verlängert sich um (Monate)</label>
+          <input id="renewal_months" name="renewal_months" type="number" min="0" max="120"
+                 value="{{ c.renewal_months if c else d.get('renewal_months', 0) }}">
+          <div class="help">0 = läuft danach unbefristet weiter (seit 03/2022 der Normalfall).</div>
+        </div>
+      </div>
+      <div class="grid grid-2" style="gap:12px">
+        <div class="field">
+          <label for="notice_months">Kündigungsfrist (Monate)</label>
+          <input id="notice_months" name="notice_months" type="number" min="0" max="24"
+                 value="{{ c.notice_months if c else d.get('notice_months', 0) }}">
+        </div>
+        <div class="field">
+          <label for="notice_days">zusätzlich (Tage)</label>
+          <input id="notice_days" name="notice_days" type="number" min="0" max="365"
+                 value="{{ c.notice_days if c else d.get('notice_days', 0) }}">
+        </div>
+      </div>
+      <div class="field">
+        <label for="reminder_lead_days">Wie früh soll ich erinnern? (Tage)</label>
+        <input id="reminder_lead_days" name="reminder_lead_days" type="number" min="0" max="365"
+               value="{{ c.reminder_lead_days if c and c.reminder_lead_days is not none else '' }}"
+               placeholder="leer = Standard aus den Einstellungen">
+      </div>
+    </fieldset>
+  </div>
+
+  <div class="card">
+    <fieldset><legend>Unterlagen</legend>
+      <div class="field">
+        <label for="customer_number">Kunden- / Vertragsnummer</label>
+        <input id="customer_number" name="customer_number" value="{{ c.customer_number if c else '' }}">
+      </div>
+      <div class="field">
+        <label for="contact_email">Kontakt für Kündigung</label>
+        <input id="contact_email" name="contact_email" value="{{ c.contact_email if c else '' }}" placeholder="service@anbieter.de">
+      </div>
+      <div class="field">
+        <label for="website">Kundenbereich (Link)</label>
+        <input id="website" name="website" value="{{ c.website if c else '' }}" placeholder="https://...">
+      </div>
+      <div class="field">
+        <label for="notes">Notizen</label>
+        <textarea id="notes" name="notes" placeholder="Tarifdetails, Ansprechpartner, Besonderheiten">{{ c.notes if c else '' }}</textarea>
+        <div class="help">Bitte hier keine Passwörter speichern – die Datei ist nicht verschlüsselt.</div>
+      </div>
+    </fieldset>
+  </div>
+</div>
+
+<div class="inline">
+  <button class="btn btn-primary" type="submit">Speichern</button>
+  <a class="btn" href="{{ '/vertraege/' ~ c.id if c else '/vertraege' }}">Abbrechen</a>
+</div>
+</form>
+{% endblock %}

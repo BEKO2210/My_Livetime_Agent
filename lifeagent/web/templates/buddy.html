@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row-between">
+  <div>
+    <h1>Dein Buddy</h1>
+    <p class="lead">{{ briefing.headline }}</p>
+  </div>
+  <form method="post" action="/buddy/pruefen">
+    <button class="btn btn-primary" type="submit">Jetzt durchsehen</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Tagesübersicht</h2>
+  <div class="stack">
+    {% for line in briefing.lines %}<div class="small">• {{ line }}</div>{% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="row-between">
+    <h2>Offene Hinweise ({{ alerts | length }})</h2>
+    {% if dismissed %}
+    <form method="post" action="/buddy/alle-zeigen">
+      <button class="btn btn-small" type="submit">{{ dismissed }} erledigte wieder zeigen</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if alerts %}
+    {% for alert in alerts %}
+    <div class="alert alert-{{ alert.severity }}">
+      <div class="body">
+        <div class="row-between">
+          <div class="title">{{ alert.title }}</div>
+          <span class="pill pill-{{ alert.severity if alert.severity != 'info' else 'accent' }}">{{ alert.severity_label }}</span>
+        </div>
+        <div class="text">{{ alert.message }}</div>
+        <div class="inline" style="margin-top:8px">
+          {% if alert.action_url %}<a class="btn btn-small" href="{{ alert.action_url }}">Ansehen</a>{% endif %}
+          <form method="post" action="/buddy/{{ alert.id }}/erledigt">
+            <button class="btn btn-small" type="submit">Erledigt</button>
+          </form>
+          {% if alert.due_date %}<span class="small muted">fällig {{ alert.due_date | datum }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="empty">
+    <h3>Nichts zu tun</h3>
+    <p>Keine Fristen, keine Auffälligkeiten. Ich melde mich, wenn sich etwas ändert.</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Erkannte wiederkehrende Zahlungen</h2>
+  <p class="small muted">
+    Aus deinen Kontoumsätzen berechnet – unabhängig davon, ob ein Vertrag hinterlegt ist.
+  </p>
+  {% if recurring %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Empfänger</th><th>Rhythmus</th><th class="right">Betrag</th><th>Zuletzt</th><th>Vertrag</th></tr></thead>
+      <tbody>
+      {% for group in recurring %}
+        <tr>
+          <td><strong>{{ group.label }}</strong><div class="small muted">{{ group.count }} Buchungen</div></td>
+          <td class="small">{{ group.rhythm }}</td>
+          <td class="right nowrap">{{ group.latest_amount | money }}</td>
+          <td class="small nowrap">{{ group.last_date | datum }}</td>
+          <td>
+            {% if group.contract_ids %}
+              <span class="pill pill-ok">hinterlegt</span>
+            {% else %}
+              <a class="btn btn-small btn-primary" href="/vertraege/neu?aus_buchung={{ group.transaction_ids[-1] }}">Vertrag anlegen</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted small">
+    Noch nichts erkannt. Dafür brauche ich mindestens drei gleichartige Abbuchungen –
+    importiere am besten 12 Monate Kontoumsätze.
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

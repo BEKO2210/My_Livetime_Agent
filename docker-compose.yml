@@ -1,0 +1,9 @@
+services:
+  lifeagent:
+    build: .
+    container_name: lifeagent
+    ports:
+      - "8777:8777"
+    volumes:
+      - ./data:/data
+    restart: unless-stopped

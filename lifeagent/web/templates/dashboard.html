@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row-between">
+  <div>
+    <h1>{{ briefing.greeting }}</h1>
+    <p class="lead">{{ briefing.headline }}</p>
+  </div>
+  <a class="btn btn-primary" href="/vertraege/neu">Vertrag hinzufügen</a>
+</div>
+
+{% if contract_count == 0 and transaction_count == 0 %}
+<div class="card empty">
+  <h3>Lass uns starten</h3>
+  <p>Zwei Wege – du kannst beide kombinieren:</p>
+  <div class="inline" style="justify-content:center">
+    <a class="btn btn-primary" href="/vertraege/neu">Ersten Vertrag eintragen</a>
+    <a class="btn" href="/import">Kontoumsätze importieren</a>
+  </div>
+  <p class="small muted" style="margin-top:14px">
+    Beim Import erkenne ich wiederkehrende Abbuchungen automatisch und schlage dir vor,
+    welche Verträge dahinterstecken.
+  </p>
+</div>
+{% endif %}
+
+<div class="grid grid-4">
+  <div class="card stat">
+    <span class="label">Feste Kosten / Monat</span>
+    <span class="value">{{ costs.monthly_cents | money }}</span>
+    <span class="hint">{{ costs.yearly_cents | money }} im Jahr · {{ costs.active_count }} Verträge</span>
+  </div>
+  <div class="card stat">
+    <span class="label">Einnahmen (Ø 3 Monate)</span>
+    <span class="value">{{ income | money }}</span>
+    <span class="hint">aus deinen erfassten Buchungen</span>
+  </div>
+  <div class="card stat">
+    <span class="label">Frei nach Fixkosten</span>
+    <span class="value {{ 'pos' if free_cents and free_cents > 0 else 'neg' if free_cents is not none and free_cents <= 0 }}">
+      {{ free_cents | money if free_cents is not none else '–' }}
+    </span>
+    <span class="hint">
+      {% if income and costs.monthly_cents %}
+        {{ (costs.monthly_cents / income * 100) | round(0) | int }} % deiner Einnahmen sind gebunden
+      {% else %}Importiere Umsätze für diese Zahl{% endif %}
+    </span>
+  </div>
+  <div class="card stat">
+    <span class="label">Dieser Monat</span>
+    <span class="value {{ 'pos' if month.balance_cents >= 0 else 'neg' }}">{{ month.balance_cents | money(true) }}</span>
+    <span class="hint">{{ month.income_cents | money }} rein · {{ month.expense_cents | money }} raus</span>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div>
+    {% if alerts %}
+    <div class="card">
+      <div class="row-between"><h2>Worauf ich dich aufmerksam mache</h2><a class="small" href="/buddy">alle ansehen</a></div>
+      {% for alert in alerts %}
+      <div class="alert alert-{{ alert.severity }}">
+        <div class="body">
+          <div class="title">{{ alert.title }}</div>
+          <div class="text">{{ alert.message }}</div>
+          {% if alert.action_url %}<a class="small" href="{{ alert.action_url }}">ansehen →</a>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <h2>Nächste Kündigungsfristen</h2>
+      {% if deadlines %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Vertrag</th><th>Kündigen bis</th><th class="right">Kosten/Monat</th></tr></thead>
+          <tbody>
+          {% for item in deadlines %}
+            <tr>
+              <td><a href="/vertraege/{{ item.contract.id }}">{{ item.contract.name }}</a>
+                  <div class="small muted">läuft bis {{ item.period_end | datum }}</div></td>
+              <td class="nowrap">{{ item.cancel_by | datum }}
+                  <div><span class="pill pill-{{ item.urgency if item.urgency in ['critical','warn'] else 'ok' }}">{{ item.days | tage }}</span></div></td>
+              <td class="right nowrap">{{ item.contract.monthly_cents | money }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="muted small">Keine Frist in den nächsten 120 Tagen. Trag bei deinen Verträgen Laufzeit und Kündigungsfrist ein, dann passe ich darauf auf.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Verlauf der letzten 6 Monate</h2>
+      <div class="bars">
+        {% for m in series %}
+        <div class="col">
+          <div class="pair">
+            <div class="bar bar-in" style="height: {{ (m.income_cents / max_series * 100) | round(1) }}%" title="{{ m.label }}: {{ m.income_cents | money }} Einnahmen"></div>
+            <div class="bar bar-out" style="height: {{ (m.expense_cents / max_series * 100) | round(1) }}%" title="{{ m.label }}: {{ m.expense_cents | money }} Ausgaben"></div>
+          </div>
+          <span class="tick">{{ m.label[:3] }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="small muted" style="margin-top:10px">Grün = Einnahmen, Rot = Ausgaben.</p>
+    </div>
+
+    <div class="card">
+      <h2>Demnächst abgebucht</h2>
+      {% if payments %}
+      <div class="stack">
+        {% for item in payments %}
+        <div class="row-between">
+          <div>
+            <a href="/vertraege/{{ item.contract.id }}">{{ item.contract.name }}</a>
+            <div class="small muted">{{ item.due | datum }} · {{ item.days | tage }}</div>
+          </div>
+          <strong class="nowrap">{{ item.amount_cents | money }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted small">Für die nächsten 30 Tage ist nichts vorgemerkt.</p>
+      {% endif %}
+    </div>
+
+    {% if costs.top_categories %}
+    <div class="card">
+      <h2>Fixkosten nach Bereich</h2>
+      <div class="stack">
+        {% for name, cents in costs.top_categories[:6] %}
+        <div>
+          <div class="row-between small"><span>{{ name }}</span><strong>{{ cents | money }}</strong></div>
+          <div class="meter"><span style="width: {{ (cents / costs.monthly_cents * 100) | round(1) }}%"></span></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

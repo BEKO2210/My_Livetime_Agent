@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Kontoumsätze importieren</h1>
+<p class="lead">
+  Lade den CSV-Export deiner Bank hoch. Ich erkenne die Spalten selbst, überspringe Doppelte
+  und ordne bekannte Anbieter automatisch zu.
+</p>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Datei hochladen</h2>
+    <form method="post" action="/import" enctype="multipart/form-data">
+      <div class="field">
+        <label for="datei">CSV-Datei</label>
+        <input id="datei" type="file" name="datei" accept=".csv,text/csv,text/plain" required>
+      </div>
+      <div class="field">
+        <label for="konto">Konto benennen (optional)</label>
+        <input id="konto" name="konto" placeholder="z. B. Girokonto">
+      </div>
+      <button class="btn btn-primary" type="submit">Importieren</button>
+    </form>
+    <p class="small muted" style="margin-top:14px">
+      Die Datei wird nur gelesen und in deine lokale Datenbank geschrieben. Nichts verlässt dein Gerät.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>So kommst du an die Datei</h2>
+    <ol class="steps small">
+      <li>Im Online-Banking auf <em>Umsätze</em> gehen.</li>
+      <li>Zeitraum wählen – beim ersten Mal ruhig 12 Monate, damit ich wiederkehrende Abbuchungen erkenne.</li>
+      <li><em>Exportieren</em> bzw. <em>Herunterladen</em> und als <strong>CSV</strong> speichern.</li>
+      <li>Datei hier hochladen. Fertig.</li>
+    </ol>
+    <p class="small muted">
+      Getestet mit Exporten von Sparkasse, DKB, ING, Comdirect, N26 und generischen CSV-Dateien.
+      Erwartet werden mindestens eine Datums- und eine Betragsspalte.
+    </p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Gelernte Zuordnungsregeln</h2>
+  {% if rules %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Erkennungstext</th><th>Vertrag</th><th>Bereich</th><th class="right">Treffer</th></tr></thead>
+      <tbody>
+      {% for rule in rules %}
+        <tr>
+          <td><code>{{ rule.pattern }}</code></td>
+          <td>{{ rule.contract.name if rule.contract else '—' }}</td>
+          <td class="small">{{ rule.category or '—' }}</td>
+          <td class="right">{{ rule.hits }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted" style="margin-top:10px">
+    Regeln entstehen, wenn du bei einer Buchung „merken“ anhakst. Löschen kannst du sie in den Einstellungen.
+  </p>
+  {% else %}
+  <p class="muted small">
+    Noch keine Regeln. Ordne eine Buchung einem Vertrag zu und hake „merken“ an –
+    ab dann passiert das automatisch.
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

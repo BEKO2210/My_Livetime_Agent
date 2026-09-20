@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row-between">
+  <div>
+    <h1>Verträge & Abos</h1>
+    <p class="lead">{{ rows | length }} Einträge · zusammen {{ total_monthly | money }} im Monat</p>
+  </div>
+  <a class="btn btn-primary" href="/vertraege/neu">Vertrag hinzufügen</a>
+</div>
+
+<div class="card">
+  <form method="get" class="grid grid-4" style="margin:0">
+    <div class="field" style="margin:0">
+      <label>Suche</label>
+      <input type="search" name="q" value="{{ q }}" placeholder="Name, Anbieter, Kundennummer">
+    </div>
+    <div class="field" style="margin:0">
+      <label>Status</label>
+      <select name="status">
+        <option value="alle" {{ 'selected' if status == 'alle' }}>alle</option>
+        {% for key, label in statuses.items() %}
+        <option value="{{ key }}" {{ 'selected' if status == key }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field" style="margin:0">
+      <label>Bereich</label>
+      <select name="kategorie">
+        <option value="">alle</option>
+        {% for c in categories %}
+        <option value="{{ c }}" {{ 'selected' if kategorie == c }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field" style="margin:0; display:flex; align-items:flex-end">
+      <button class="btn" type="submit">Filtern</button>
+    </div>
+  </form>
+</div>
+
+{% if rows %}
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Vertrag</th><th>Bereich</th><th class="right">Betrag</th>
+          <th class="right">pro Monat</th><th>Kündigen bis</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in rows %}
+        {% set c = row.contract %}{% set t = row.timing %}
+        <tr>
+          <td>
+            <a href="/vertraege/{{ c.id }}"><strong>{{ c.name }}</strong></a>
+            <div class="small muted">{{ c.provider or c.kind_label }}</div>
+          </td>
+          <td class="small">{{ c.category }}</td>
+          <td class="right nowrap">{{ c.amount_cents | money }}<div class="small muted">{{ c.interval_label }}</div></td>
+          <td class="right nowrap">{{ c.monthly_cents | money }}</td>
+          <td class="nowrap">
+            {% if t.cancel_by %}
+              {{ t.cancel_by | datum }}
+              <div><span class="pill pill-{{ t.urgency if t.urgency in ['critical','warn'] else 'ok' }}">{{ t.days_until_cancel | tage }}</span></div>
+            {% elif c.start_date %}
+              <span class="small muted">jederzeit kündbar</span>
+            {% else %}
+              <span class="pill">Beginn fehlt</span>
+            {% endif %}
+          </td>
+          <td><span class="pill {{ 'pill-ok' if c.status == 'active' }}">{{ c.status_label }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card empty">
+  <h3>Noch nichts hier</h3>
+  <p>Trag deinen ersten Vertrag ein – oder importiere Kontoumsätze, dann finde ich deine Abos selbst.</p>
+  <div class="inline" style="justify-content:center">
+    <a class="btn btn-primary" href="/vertraege/neu">Vertrag hinzufügen</a>
+    <a class="btn" href="/import">Umsätze importieren</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
